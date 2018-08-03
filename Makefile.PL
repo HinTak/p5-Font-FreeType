@@ -1,4 +1,5 @@
 use Devel::CheckLib;
+use FFI::CheckLib ();
 use ExtUtils::MakeMaker;
 use File::Spec::Functions;
 use File::Which;
@@ -54,6 +55,8 @@ check_lib_or_exit(
     %MakeMakerFlags,
     %header_config,
 );
+
+FFI::CheckLib::check_lib_or_exit(lib => 'freetype', symbol => ['TT_Diagnostics_Unset', 'TT_Diagnostics_Set'] );
 
 WriteMakefile(
     NAME               => 'Font::FreeType',
