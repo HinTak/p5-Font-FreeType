@@ -249,8 +249,8 @@ ensure_outline_loaded (FT_Face face, Font_FreeType_Glyph glyph)
 
     extra = face->generic.data;
     if (!extra->glyph_ft)
-        errchk(FT_Get_Glyph(face->glyph, &extra->glyph_ft),
-               "getting glyph object from freetype");
+      if (FT_Err_Ok != FT_Get_Glyph(face->glyph, &extra->glyph_ft))
+        return false;
 
     return extra->glyph_ft->format == FT_GLYPH_FORMAT_OUTLINE;
 }
