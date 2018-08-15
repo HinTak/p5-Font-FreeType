@@ -232,9 +232,9 @@ ensure_glyph_loaded (FT_Face face, Font_FreeType_Glyph glyph)
             FT_Done_Glyph(extra->glyph_ft);
             extra->glyph_ft = 0;
         }
+        extra->loaded_glyph_idx = glyph->index;
         errchk(FT_Load_Glyph(face, glyph->index, extra->glyph_load_flags),
                "loading freetype glyph");
-        extra->loaded_glyph_idx = glyph->index;
         extra->slot_valid = true;
     }
 
