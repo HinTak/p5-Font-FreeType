@@ -10,7 +10,34 @@ my $face = Font::FreeType->new->face($filename);
 
 $face->set_char_size(10, 0, 96, 96);
 $face->set_diag(sub{
-    print join("\t", @_), "\n";
+    my ($glyph_id, $mess_code, $message,
+        $opcode, $range_base, $is_composite,
+        $IP, $callTop, $opc, $start ) = @_;
+
+    print $message, " ";
+    print $opcode, ":";
+    if ( $range_base == 3 )
+    {
+        if ($is_composite != 0) {
+            print " Composite Glyph ", $glyph_id;
+        }
+        else {
+            print " Glyph ID ", $glyph_id;
+        }
+    }
+    elsif (( $range_base == 1 ) || ( $range_base == 2))
+    {
+        print " Pre-Program";
+    }
+    else
+    {
+        print " Unknown?";
+    }
+    print ", At ByteOffset ", $IP;
+    if ($callTop > 0) {
+        print ", In function ", $opc, " offsetted by ", ($IP - $start);
+    }
+    print "\n";
                 });
 $face->foreach_glyph(sub {
      $_->load;
