@@ -101,6 +101,7 @@ struct QefFT2_Face_Extra_
     FT_Int32 glyph_load_flags;
     FT_Glyph glyph_ft;
     bool slot_valid;
+    SV *perl_diag;
 };
 typedef struct QefFT2_Face_Extra_ QefFT2_Face_Extra;
 
@@ -260,8 +261,41 @@ ensure_outline_loaded (FT_Face face, Font_FreeType_Glyph glyph)
 #define QEFFT2_NUM(num)  ((double) (num) / 64.0)
 #define QEFFT2_PUSH_NUM(num)  XPUSHs(sv_2mortal(newSVnv((double) num / 64.0)));
 #define QEFFT2_PUSH_DNUM(num)  XPUSHs(sv_2mortal(newSVnv(num)));
+#define QEFFT2_PUSH_INT(num)  XPUSHs(sv_2mortal(newSViv(num)));
+#define QEFFT2_PUSH_STR(str)  XPUSHs(sv_2mortal(newSVpv(str, 0)));
 #define QEFFT2_CALL(code)  PUTBACK; call_sv(code, G_DISCARD);
 #define QEFFT2_CALL_TIDY  FREETMPS; LEAVE;
+
+static int
+handle_diag (FT_Face            face,
+             int                mess_code,
+             const char*        message,
+             const char* const  opcode,
+             int                range_base,
+             int                is_composite,
+             int                IP,
+             int                callTop,
+             int                opc,
+             int                start )
+{
+    QefFT2_Face_Extra *extra = face->generic.data;
+
+    QEFFT2_CALL_PREP
+    QEFFT2_PUSH_INT(extra->loaded_glyph_idx)
+    QEFFT2_PUSH_INT(mess_code)
+    QEFFT2_PUSH_STR(message)
+    QEFFT2_PUSH_STR(opcode)
+    QEFFT2_PUSH_INT(range_base)
+    QEFFT2_PUSH_INT(is_composite)
+    QEFFT2_PUSH_INT(IP)
+    QEFFT2_PUSH_INT(callTop)
+    QEFFT2_PUSH_INT(opc)
+    QEFFT2_PUSH_INT(start)
+    QEFFT2_CALL(extra->perl_diag)
+    QEFFT2_CALL_TIDY
+
+  return 0;
+}
 
 static int
 handle_move_to (const FT_Vector *to, void *data)
@@ -423,6 +457,7 @@ qefft2_face (Font_FreeType library, const char *filename, int faceidx, FT_Int32 
         extra->library_sv = library_sv;
         extra->loaded_glyph_idx = 0;
         extra->slot_valid = false;
+        extra->perl_diag = NULL;
         extra->glyph_load_flags = glyph_load_flags;
         extra->glyph_ft = 0;
         RETVAL->generic.data = (void *) extra;
@@ -943,6 +978,24 @@ qefft2_face_foreach_glyph (Font_FreeType_Face face, SV *code)
             FREETMPS;
             LEAVE;
         }
+
+
+void
+qefft2_face_unset_diag (Font_FreeType_Face face)
+    CODE:
+        QefFT2_Face_Extra *extra = face->generic.data;
+        SvREFCNT_dec(extra->perl_diag);
+        extra->perl_diag = NULL;
+        TT_Diagnostics_Unset( face );
+
+
+void
+qefft2_face_set_diag (Font_FreeType_Face face, SV *args)
+    CODE:
+        QefFT2_Face_Extra *extra = face->generic.data;
+        extra->perl_diag = args;
+        SvREFCNT_inc(args);
+        TT_Diagnostics_Set( face , &handle_diag);
 
 
 MODULE = Font::FreeType   PACKAGE = Font::FreeType::Glyph   PREFIX = qefft2_glyph_
