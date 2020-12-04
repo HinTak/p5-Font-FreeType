@@ -100,7 +100,7 @@ struct QefFT2_Face_Extra_
     FT_UInt loaded_glyph_idx;
     FT_Int32 glyph_load_flags;
     FT_Glyph glyph_ft;
-    bool slot_valid;
+    int slot_valid;
     SV *perl_diag;
 };
 typedef struct QefFT2_Face_Extra_ QefFT2_Face_Extra;
@@ -228,15 +228,15 @@ ensure_glyph_loaded (FT_Face face, Font_FreeType_Glyph glyph)
 {
     QefFT2_Face_Extra *extra = face->generic.data;
 
-    if (extra->loaded_glyph_idx != glyph->index || extra->slot_valid != true ) {
+    if (extra->loaded_glyph_idx != glyph->index || !extra->slot_valid) {
         if (extra->glyph_ft) {
             FT_Done_Glyph(extra->glyph_ft);
             extra->glyph_ft = 0;
         }
-        extra->loaded_glyph_idx = glyph->index;
         errchk(FT_Load_Glyph(face, glyph->index, extra->glyph_load_flags),
                "loading freetype glyph");
-        extra->slot_valid = true;
+        extra->loaded_glyph_idx = glyph->index;
+        extra->slot_valid = 1;
     }
 
     return face->glyph;
@@ -456,7 +456,7 @@ qefft2_face (Font_FreeType library, const char *filename, int faceidx, FT_Int32 
         Newx(extra, 1, QefFT2_Face_Extra);
         extra->library_sv = library_sv;
         extra->loaded_glyph_idx = 0;
-        extra->slot_valid = false;
+        extra->slot_valid = 0;
         extra->perl_diag = NULL;
         extra->glyph_load_flags = glyph_load_flags;
         extra->glyph_ft = 0;
@@ -487,7 +487,7 @@ qefft2_face_load_flags (Font_FreeType_Face face, FT_Int32 val = NO_INIT )
         extra = face->generic.data;
         if( items > 1 )
         {
-            extra->slot_valid = false;
+            extra->slot_valid = 0;
             extra->glyph_load_flags = val;
         }
         RETVAL = extra->glyph_load_flags;
@@ -671,7 +671,7 @@ qefft2_face_set_char_size (Font_FreeType_Face face, FT_F26Dot6 width, FT_F26Dot6
     CODE:
         errchk(FT_Set_Char_Size(face, width, height, x_res, y_res),
                "setting char size of freetype face");
-        ((QefFT2_Face_Extra *) face->generic.data)->slot_valid = false;
+        ((QefFT2_Face_Extra *) face->generic.data)->slot_valid = 0;
 
 
 void
@@ -679,7 +679,7 @@ qefft2_face_set_pixel_size (Font_FreeType_Face face, FT_UInt width, FT_UInt heig
     CODE:
         errchk(FT_Set_Pixel_Sizes(face, width, height),
                "setting pixel size of freetype face");
-        ((QefFT2_Face_Extra *) face->generic.data)->slot_valid = false;
+        ((QefFT2_Face_Extra *) face->generic.data)->slot_valid = 0;
 
 
 SV *
